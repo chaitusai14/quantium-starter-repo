@@ -28,4 +28,6 @@ formatted_data_2 = pink_morsel_data_2[['sales', 'date', 'region']]
 formatted_data = pd.concat([formatted_data_0, formatted_data_1, formatted_data_2])
 
 print(formatted_data.head())
-#End of code
+#formatted_data.to_csv('data/formatted_sales_data.csv', index=False)
+
+#print(formatted_data.isnull().sum())
