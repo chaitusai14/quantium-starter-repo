@@ -14,119 +14,118 @@ df['date'] = pd.to_datetime(df['date'], errors='coerce')
 # Initialize the Dash app
 app = dash.Dash(__name__)
 
-# Define the layout of the app
-app.layout = html.Div(children=[
+# Define the layout of the app with CSS styling
+app.layout = html.Div(style={
+    'backgroundColor': '#f4faff',
+    'fontFamily': 'Arial, sans-serif',
+    'padding': '20px'
+}, children=[
+
+    # Header
     html.H1(children="Soul Foods Sales Data Visualiser",
-            style={'textAlign': 'center', 'color': '#007BFF'}),
+            style={
+                'textAlign': 'center',
+                'color': '#007BFF',
+                'fontSize': '38px',
+                'fontWeight': 'bold',
+                'marginBottom': '30px'}),
 
-    # Sub-header with instructions
-    html.Div(children='''
-        Compare Pink Morsel sales before and after the price increase on January 15, 2021.
-    ''', style={'textAlign': 'center', 'fontSize': 20}),
+    # Sub-header
+    html.Div(children='''Compare Pink Morsel sales before and after the price increase on January 15, 2021.''',
+             style={
+                 'textAlign': 'center',
+                 'fontSize': '20px',
+                 'color': '#555',
+                 'marginBottom': '20px'}),
 
-    # Dropdown for selecting region
+    # Radio buttons for selecting region with horizontal layout and no empty space
     html.Div([
-        html.Label("Select Region:"),
-        dcc.Dropdown(
+        html.Label("Select Region:", style={'fontSize': '18px', 'color': '#333'}),
+        dcc.RadioItems(
             id='region-filter',
-            options=[{'label': region, 'value': region} for region in df['region'].unique()],
-            value='north',  # Default selected value
-            clearable=False,
-            style={'width': '50%'}
+            options=[
+                {'label': 'North', 'value': 'north'},
+                {'label': 'East', 'value': 'east'},
+                {'label': 'South', 'value': 'south'},
+                {'label': 'West', 'value': 'west'},
+                {'label': 'All', 'value': 'all'}
+            ],
+            value='all',
+            style={
+                'display': 'flex',
+                'justifyContent': 'space-between',  # Tighten spacing between items
+                'padding': '5px',
+                'backgroundColor': '#e0f4fc',
+                'border': '1px solid #007BFF',
+                'borderRadius': '10px',
+                'boxShadow': '2px 2px 10px rgba(0, 0, 0, 0.1)',
+                'fontSize': '16px',
+                'color': '#00796B'
+            }
         )
-    ], style={'margin': '20px auto', 'width': '50%'}),
+    ], style={'margin': '20px auto', 'width': '40%', 'textAlign': 'center', 'padding': '5px', 'borderRadius': '15px',
+              'backgroundColor': '#eef9ff'}),
 
-    # Line chart for sales data
+    # Line chart for sales data with enhanced styling and legend
     dcc.Graph(
         id='sales-line-chart',
-        style={'height': '600px'}
+        style={
+            'height': '600px',
+            'border': '2px solid #007BFF',
+            'padding': '10px',
+            'borderRadius': '15px',
+            'backgroundColor': '#ffffff',
+            'boxShadow': '2px 2px 10px rgba(0, 0, 0, 0.1)'
+        }
     )
 ])
 
 
 # Define callback to update the chart based on selected region
-
 @app.callback(
     Output('sales-line-chart', 'figure'),
     Input('region-filter', 'value')
 )
 def update_line_chart(selected_region):
-    # Filter data by the selected region
-    filtered_df = df[df['region'] == selected_region]
+    # Filter data by the selected region, or show all regions if 'all' is selected
+    if selected_region == 'all':
+        filtered_df = df.groupby('date').sum().reset_index()  # Aggregate the data when showing all
+        fig = px.line(filtered_df, x='date', y='sales', title=f'Sales in All Regions')  # Single line for all regions
+    else:
+        filtered_df = df[df['region'] == selected_region]
+        # Use specific color for each region
+        region_color_map = {
+            'north': 'blue',
+            'east': 'orange',
+            'south': 'green',
+            'west': 'red'
+        }
+        fig = px.line(filtered_df, x='date', y='sales', title=f'Sales in {selected_region.title()} Region')
+        fig.update_traces(line_color=region_color_map[selected_region])  # Set specific color
 
-    # Debugging the date column
-    print(filtered_df['date'].min(), filtered_df['date'].max())  # Print date range
-
-    # Set the price increase date and another event date
+    # Set the price increase date and marketing event date
     price_increase_date = pd.Timestamp('2021-01-15')
     marketing_event_date = pd.Timestamp('2020-07-01')
 
-    # Get the date and value of the highest sales point
+    # Get the highest sales date and value
     highest_sales_date = filtered_df.loc[filtered_df['sales'].idxmax()]['date']
     highest_sales_value = filtered_df['sales'].max()
 
-    # Plot the chart with filtered data
-    fig = px.line(filtered_df, x='date', y='sales', title=f'Sales in {selected_region} Region')
-
-    # Annotation 1: Price Increase
+    # Annotation for Price Increase
     fig.add_annotation(
         x=price_increase_date,
-        y=highest_sales_value,  # Arrow points to the highest sales
+        y=highest_sales_value,
         text="Price Increase",
-        showarrow=True,
-        arrowhead=2,  # Smaller arrowhead
-        arrowsize=1.5,  # Reduced arrow size
-        arrowwidth=1.5,
-        arrowcolor='blue',
-        ax=0,
-        ay=-30,
-        font=dict(size=12, color="white", family="Arial"),  # Smaller font
-        bgcolor="red",
-        bordercolor="black",
-        borderwidth=1.5,  # Smaller border
-        borderpad=2,
-        opacity=0.8,
-        xanchor='left',
-        yanchor='top',
-    )
-
-    # Annotation 2: Highest Sales
-    fig.add_annotation(
-        x=highest_sales_date,
-        y=highest_sales_value,  # Positioning at the highest sales value
-        text="Highest Sales",
-        showarrow=True,
-        arrowhead=2,  # Smaller arrowhead
-        arrowsize=1.5,
-        arrowwidth=1.5,
-        arrowcolor='green',
-        ax=0,
-        ay=-40,
-        font=dict(size=12, color="black", family="Arial"),  # Smaller font
-        bgcolor="yellow",
-        bordercolor="black",
-        borderwidth=1.5,  # Smaller border
-        borderpad=2,
-        opacity=0.8,
-        xanchor='left',
-        yanchor='top',
-    )
-
-    # Annotation 3: Marketing Event (Example)
-    fig.add_annotation(
-        x=marketing_event_date,
-        y=filtered_df['sales'].min(),  # Arrow points to the lowest sales
-        text="Marketing Event",
         showarrow=True,
         arrowhead=2,
         arrowsize=1.5,
         arrowwidth=1.5,
-        arrowcolor='purple',
+        arrowcolor='blue',
         ax=0,
         ay=-30,
-        font=dict(size=12, color="white", family="Arial"),  # Smaller font
-        bgcolor="purple",
-        bordercolor="white",
+        font=dict(size=12, color="white"),
+        bgcolor="red",
+        bordercolor="black",
         borderwidth=1.5,
         borderpad=2,
         opacity=0.8,
@@ -134,53 +133,38 @@ def update_line_chart(selected_region):
         yanchor='top',
     )
 
-    # Custom Legend Annotations (higher above the chart in the top-right)
+    # Annotation for Highest Sales
     fig.add_annotation(
-        xref="paper", yref="paper",  # Paper coordinates to position it outside
-        x=0.95, y=1.25,  # Move legend higher above the chart
-        text="Legend:",
-        showarrow=False,
-        font=dict(size=14, color="black", family="Arial"),
-        xanchor="right", yanchor="bottom"
+        x=highest_sales_date,
+        y=highest_sales_value,
+        text="Highest Sales",
+        showarrow=True,
+        arrowhead=2,
+        arrowsize=1.5,
+        arrowwidth=1.5,
+        arrowcolor='green',
+        ax=0,
+        ay=-40,
+        font=dict(size=12, color="black"),
+        bgcolor="yellow",
+        bordercolor="black",
+        borderwidth=1.5,
+        borderpad=2,
+        opacity=0.8,
+        xanchor='left',
+        yanchor='top',
     )
 
-    # Legend entry for Price Increase
-    fig.add_annotation(
-        xref="paper", yref="paper",
-        x=0.95, y=1.20,
-        text="• Price Increase (Red)",
-        showarrow=False,
-        font=dict(size=12, color="red"),
-        xanchor="right"
-    )
-
-    # Legend entry for Highest Sales
-    fig.add_annotation(
-        xref="paper", yref="paper",
-        x=0.95, y=1.15,
-        text="• Highest Sales (Green)",
-        showarrow=False,
-        font=dict(size=12, color="green"),
-        xanchor="right"
-    )
-
-    # Legend entry for Marketing Event
-    fig.add_annotation(
-        xref="paper", yref="paper",
-        x=0.95, y=1.10,
-        text="• Marketing Event (Purple)",
-        showarrow=False,
-        font=dict(size=12, color="purple"),
-        xanchor="right"
-    )
-
-    # Customize layout: add axis labels and adjust margins
+    # Update layout with axis labels, legend, and overall styling
     fig.update_layout(
+        yaxis_title='Sales',
         xaxis_title='Date',
-        yaxis_title='Total Sales',
-        title_x=0.5,
-        margin=dict(l=40, r=40, t=150, b=40),  # Increased top margin for the legend
-        hovermode="x"
+        plot_bgcolor='#f9f9f9',
+        paper_bgcolor='#f4faff',
+        font=dict(family="Arial, sans-serif", size=14),
+        legend_title="Region",
+        legend=dict(orientation="h", yanchor="bottom", y=1, xanchor="center", x=0.5, title_text="Regions",
+                    bordercolor="Black", borderwidth=1)
     )
 
     return fig
